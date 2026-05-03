@@ -8,5 +8,4 @@ TILE_SIZE = 64
 FRAMERATE = 60
 BG_COLOR = '#fcdfcd'
 
-# Scale for the player sprite frames (e.g., 0.5 = 50%)
 PLAYER_SCALE = 0.06

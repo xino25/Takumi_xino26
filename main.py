@@ -8,6 +8,7 @@ from util.transition import FadeTransition
 from main_screen.menu import MenuScreen
 from main_screen.cutscene import CutsceneScreen
 from main_screen.cutscene2 import Cutscene2Screen
+from main_screen.ending_cutscene import EndingCutsceneScreen
 from main_screen.map import MapScreen
 from side_quests.stage1.solar import create_solar_quest
 from side_quests.stage3.main import Stage3Screen
@@ -35,6 +36,7 @@ def main():
 	menu_screen = MenuScreen(font)
 	cutscene_screen = CutsceneScreen(font)
 	cutscene2_screen = Cutscene2Screen(font)
+	ending_cutscene_screen = EndingCutsceneScreen(font)
 	map_screen = MapScreen(font)
 	active_screen = "pre_story"
 	stage1 = None
@@ -58,6 +60,9 @@ def main():
 		transition["to"] = to_screen
 		screen_fade.start(now_ms)
 
+	def all_stages_completed():
+		return len(map_screen.completed_stages) == 3
+
 	def set_music_state(state):
 		nonlocal music_state
 		if state == music_state:
@@ -65,10 +70,16 @@ def main():
 		music_state = state
 		if state == "story_menu":
 			if os.path.exists(menu_music_path):
-				pygame.mixer.music.load(menu_music_path)
-				pygame.mixer.music.play(-1)
+				try:
+					pygame.mixer.music.load(menu_music_path)
+					pygame.mixer.music.play(-1)
+				except pygame.error:
+					pass
 		else:
-			pygame.mixer.music.stop()
+			try:
+				pygame.mixer.music.stop()
+			except pygame.error:
+				pass
 
 	def start_stage(stage_key, now_ms):
 		nonlocal stage1, stage2, stage3, stage2_surface
@@ -114,6 +125,8 @@ def main():
 				cutscene_screen.handle_event(event)
 			elif active_screen == "cutscene2":
 				cutscene2_screen.handle_event(event)
+			elif active_screen == "ending_cutscene":
+				ending_cutscene_screen.handle_event(event)
 			elif active_screen == "map":
 				map_screen.handle_event(event)
 			elif active_screen == "stage1" and stage1:
@@ -172,6 +185,11 @@ def main():
 			if cutscene2_screen.is_done() and not transition["active"]:
 				start_transition("cutscene2", "map", now_ms)
 			cutscene2_screen.draw(screen)
+		elif screen_to_draw == "ending_cutscene":
+			ending_cutscene_screen.update(now_ms)
+			if ending_cutscene_screen.is_done() and not transition["active"]:
+				start_transition("ending_cutscene", "menu", now_ms)
+			ending_cutscene_screen.draw(screen)
 		elif screen_to_draw == "map":
 			map_screen.update(now_ms)
 			map_screen.draw(screen)
@@ -187,7 +205,11 @@ def main():
 					map_screen.mark_completed("stage1")
 				exiting_stage = "stage1"
 				map_screen.reset()
-				start_transition("stage1", "map", now_ms)
+				if all_stages_completed():
+					ending_cutscene_screen.reset()
+					start_transition("stage1", "ending_cutscene", now_ms)
+				else:
+					start_transition("stage1", "map", now_ms)
 		elif screen_to_draw == "stage2" and stage2:
 			stage2.step(dt)
 			src_size = stage2_surface.get_size() if stage2_surface else screen.get_size()
@@ -209,7 +231,11 @@ def main():
 				stage2.stop_audio()
 				exiting_stage = "stage2"
 				map_screen.reset()
-				start_transition("stage2", "map", now_ms)
+				if all_stages_completed():
+					ending_cutscene_screen.reset()
+					start_transition("stage2", "ending_cutscene", now_ms)
+				else:
+					start_transition("stage2", "map", now_ms)
 		elif screen_to_draw == "stage3" and stage3:
 			stage3.update(now_ms)
 			stage3.draw(screen)
@@ -218,7 +244,11 @@ def main():
 					map_screen.mark_completed("stage3")
 				exiting_stage = "stage3"
 				map_screen.reset()
-				start_transition("stage3", "map", now_ms)
+				if all_stages_completed():
+					ending_cutscene_screen.reset()
+					start_transition("stage3", "ending_cutscene", now_ms)
+				else:
+					start_transition("stage3", "map", now_ms)
 
 		if transition["active"]:
 			screen_fade.draw_overlay(screen, now_ms)

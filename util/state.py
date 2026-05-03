@@ -1,8 +1,8 @@
 class State:
     def __init__(self):
-        self.done = False  
-        self.quit = False  
-        self.next_state = None  
+        self.done = False
+        self.quit = False
+        self.next_state = None
 
     def handle_events(self, events):
         pass
